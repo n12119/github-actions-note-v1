@@ -1,4 +1,4 @@
-name: Note: Post from Markdown
+name: "Note: Post from Markdown"
 
 on:
   workflow_dispatch:
