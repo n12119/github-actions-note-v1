@@ -33,13 +33,20 @@ jobs:
 
       - name: Resolve inputs
         id: vars
+        env:
+          INPUT_MARKDOWN_PATH: ${{ github.event.inputs.markdown_path || '' }}
+          INPUT_TONE: ${{ github.event.inputs.tone || '' }}
+          INPUT_IS_PUBLIC: ${{ github.event.inputs.is_public || '' }}
         run: |
-          MP="${{ github.event.inputs.markdown_path }}"
+          MP="${INPUT_MARKDOWN_PATH:-}"
           if [ -z "$MP" ]; then MP="articles/sample.md"; fi
-          TONE="${{ github.event.inputs.tone }}"
+
+          TONE="${INPUT_TONE:-}"
           if [ -z "$TONE" ]; then TONE="desu-masu"; fi
-          ISP="${{ github.event.inputs.is_public }}"
+
+          ISP="${INPUT_IS_PUBLIC:-}"
           if [ -z "$ISP" ]; then ISP="false"; fi
+
           echo "markdown_path=$MP" >> $GITHUB_OUTPUT
           echo "tone=$TONE" >> $GITHUB_OUTPUT
           echo "is_public=$ISP" >> $GITHUB_OUTPUT
