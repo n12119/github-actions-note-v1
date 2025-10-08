@@ -47,6 +47,11 @@ jobs:
           echo "tone=$TONE" >> $GITHUB_OUTPUT
           echo "is_public=$ISP" >> $GITHUB_OUTPUT
 
+          # Also export as environment variables for subsequent steps
+          echo "MARKDOWN_PATH=$MP" >> $GITHUB_ENV
+          echo "TONE=$TONE" >> $GITHUB_ENV
+          echo "IS_PUBLIC=$ISP" >> $GITHUB_ENV
+
       - name: Install deps
         run: |
           if [ -f package-lock.json ]; then npm ci; else npm i; fi
@@ -65,17 +70,16 @@ jobs:
         run: |
           mkdir -p .out
           node scripts/md-style-optimize.mjs \
-            --in "${{ steps.vars.outputs.markdown_path }}" \
+            --in "$MARKDOWN_PATH" \
             --out ".out/optimized.md" \
-            --tone "${{ steps.vars.outputs.tone }}"
+            --tone "$TONE"
 
       - name: Post to note (Playwright)
         env:
-          NOTE_IS_PUBLIC: ${{ steps.vars.outputs.is_public }}
           NOTE_BASE_URL: "https://note.com"
           NOTE_EDITOR_DELAY_MS: "0"
         run: |
           node scripts/post-from-md.mjs \
             --in ".out/optimized.md" \
             --storage "./note-state.json" \
-            --is-public "$NOTE_IS_PUBLIC"
+            --is-public "$IS_PUBLIC"
