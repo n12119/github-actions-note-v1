@@ -1,0 +1,78 @@
+name: Note: Post from Markdown
+
+on:
+  workflow_dispatch:
+    inputs:
+      markdown_path:
+        description: "Path to .md under articles/"
+        required: true
+        default: "articles/sample.md"
+      is_public:
+        description: "Publish? true:公開 / false:下書き保存"
+        required: true
+        default: "false"
+      tone:
+        description: "desu-masu or da-dearu"
+        required: false
+        default: "desu-masu"
+  push:
+    branches: [ main ]
+    paths:
+      - "articles/**/*.md"
+
+jobs:
+  post-from-md:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Resolve inputs
+        id: vars
+        run: |
+          MP="${{ github.event.inputs.markdown_path }}"
+          if [ -z "$MP" ]; then MP="articles/sample.md"; fi
+          TONE="${{ github.event.inputs.tone }}"
+          if [ -z "$TONE" ]; then TONE="desu-masu"; fi
+          ISP="${{ github.event.inputs.is_public }}"
+          if [ -z "$ISP" ]; then ISP="false"; fi
+          echo "markdown_path=$MP" >> $GITHUB_OUTPUT
+          echo "tone=$TONE" >> $GITHUB_OUTPUT
+          echo "is_public=$ISP" >> $GITHUB_OUTPUT
+
+      - name: Install deps
+        run: |
+          if [ -f package-lock.json ]; then npm ci; else npm i; fi
+          # 一時インストール（package.jsonの変更は不要）
+          npm i --no-save gray-matter @anthropic-ai/sdk playwright
+          npx playwright install --with-deps chromium
+
+      - name: Restore note login state
+        run: |
+          echo "${{ secrets.NOTE_STORAGE_STATE_JSON }}" > note-state.json
+          test -s note-state.json || (echo "NOTE_STORAGE_STATE_JSON is empty"; exit 1)
+
+      - name: Optimize markdown style (Anthropic)
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          mkdir -p .out
+          node scripts/md-style-optimize.mjs \
+            --in "${{ steps.vars.outputs.markdown_path }}" \
+            --out ".out/optimized.md" \
+            --tone "${{ steps.vars.outputs.tone }}"
+
+      - name: Post to note (Playwright)
+        env:
+          NOTE_IS_PUBLIC: ${{ steps.vars.outputs.is_public }}
+          NOTE_BASE_URL: "https://note.com"
+          NOTE_EDITOR_DELAY_MS: "0"
+        run: |
+          node scripts/post-from-md.mjs \
+            --in ".out/optimized.md" \
+            --storage "./note-state.json" \
+            --is-public "$NOTE_IS_PUBLIC"
