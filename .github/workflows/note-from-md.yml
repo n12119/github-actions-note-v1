@@ -33,18 +33,14 @@ jobs:
 
       - name: Resolve inputs
         id: vars
-        env:
-          INPUT_MARKDOWN_PATH: ${{ github.event.inputs.markdown_path || '' }}
-          INPUT_TONE: ${{ github.event.inputs.tone || '' }}
-          INPUT_IS_PUBLIC: ${{ github.event.inputs.is_public || '' }}
         run: |
-          MP="${INPUT_MARKDOWN_PATH:-}"
+          # Read workflow_dispatch inputs from event payload if present; fall back otherwise
+          MP=$(node -e 'try{const fs=require("fs");const p=JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH,"utf8"));process.stdout.write((p.inputs&&p.inputs.markdown_path)||"");}catch{process.stdout.write("");}')
+          TONE=$(node -e 'try{const fs=require("fs");const p=JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH,"utf8"));process.stdout.write((p.inputs&&p.inputs.tone)||"");}catch{process.stdout.write("");}')
+          ISP=$(node -e 'try{const fs=require("fs");const p=JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH,"utf8"));process.stdout.write((p.inputs&&p.inputs.is_public)||"");}catch{process.stdout.write("");}')
+
           if [ -z "$MP" ]; then MP="articles/sample.md"; fi
-
-          TONE="${INPUT_TONE:-}"
           if [ -z "$TONE" ]; then TONE="desu-masu"; fi
-
-          ISP="${INPUT_IS_PUBLIC:-}"
           if [ -z "$ISP" ]; then ISP="false"; fi
 
           echo "markdown_path=$MP" >> $GITHUB_OUTPUT
