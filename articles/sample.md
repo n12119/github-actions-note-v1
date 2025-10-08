@@ -9,6 +9,8 @@ tone: "desu-masu"
 
 > Auto-post smoke test: ${DATE}
 
+_push trigger check: ${DATE}_
+
 この記事では、GitHub Actions と Playwright を使って、手元で作成した Markdown 原稿を note に**下書き**として自動送信する流れを紹介します。
 
 ## 構成
