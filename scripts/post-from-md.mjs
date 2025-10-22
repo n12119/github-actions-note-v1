@@ -61,10 +61,20 @@ async function clickPostNewText() {
   } catch (e) {
     console.log("Failed to click '投稿' button, trying direct URL navigation...");
     try {
-      await page.goto(`${NOTE_BASE_URL}/notes/new`, { waitUntil: "networkidle" });
+      await page.goto(`${NOTE_BASE_URL}/notes/new`, { waitUntil: "networkidle", timeout: 30000 });
       console.log("Navigated to /notes/new directly. Current URL:", page.url());
       // Wait for editor to initialize (new editor takes time)
-      await page.waitForTimeout(2000);
+      await page.waitForTimeout(5000);
+
+      // Debug: log page title and check what elements exist
+      const pageTitle = await page.title();
+      console.log("Page title:", pageTitle);
+
+      const textareaCount = await page.locator('textarea').count();
+      const inputCount = await page.locator('input[type="text"]').count();
+      const editableCount = await page.locator('[contenteditable="true"]').count();
+      console.log(`Found elements - textareas: ${textareaCount}, text inputs: ${inputCount}, contenteditable: ${editableCount}`);
+
       return;
     } catch (_) {
       throw e;
@@ -74,8 +84,19 @@ async function clickPostNewText() {
 
 async function fillTitle(text) {
   console.log("Filling title:", text);
+
+  // Debug: List all textareas and their placeholders
+  const textareas = await page.locator('textarea').all();
+  console.log(`Checking ${textareas.length} textarea elements...`);
+  for (let i = 0; i < textareas.length; i++) {
+    const placeholder = await textareas[i].getAttribute('placeholder');
+    const isVisible = await textareas[i].isVisible();
+    console.log(`  Textarea ${i}: placeholder="${placeholder}", visible=${isVisible}`);
+  }
+
   const candidates = [
     page.locator('textarea[placeholder="記事タイトル"]'),
+    page.locator('textarea').first(),
     page.getByPlaceholder("記事タイトル"),
     page.getByPlaceholder("タイトル"),
     page.locator('input[placeholder*="タイトル"]'),
@@ -96,6 +117,16 @@ async function fillBody(md) {
   console.log("Looking for editor (contenteditable)...");
   console.log("Current URL before editor search:", page.url());
 
+  // Debug: List all contenteditable elements
+  const editables = await page.locator('[contenteditable="true"]').all();
+  console.log(`Checking ${editables.length} contenteditable elements...`);
+  for (let i = 0; i < editables.length; i++) {
+    const className = await editables[i].getAttribute('class');
+    const role = await editables[i].getAttribute('role');
+    const isVisible = await editables[i].isVisible();
+    console.log(`  Editable ${i}: class="${className}", role="${role}", visible=${isVisible}`);
+  }
+
   // New note.com editor uses ProseMirror with role="textbox"
   const editorCandidates = [
     page.locator('.ProseMirror[contenteditable="true"]'),
@@ -104,13 +135,16 @@ async function fillBody(md) {
   ];
 
   let editor = null;
-  for (const candidate of editorCandidates) {
+  for (let i = 0; i < editorCandidates.length; i++) {
+    const candidate = editorCandidates[i];
     try {
       await candidate.waitFor({ state: "visible", timeout: 10000 });
       editor = candidate;
-      console.log("Editor found with selector:", editorCandidates.indexOf(candidate));
+      console.log("Editor found with selector index:", i);
       break;
-    } catch {}
+    } catch (err) {
+      console.log(`Selector ${i} failed:`, err.message);
+    }
   }
 
   if (!editor) {
