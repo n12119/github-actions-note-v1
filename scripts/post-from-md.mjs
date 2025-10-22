@@ -63,17 +63,45 @@ async function clickPostNewText() {
     try {
       await page.goto(`${NOTE_BASE_URL}/notes/new`, { waitUntil: "networkidle", timeout: 30000 });
       console.log("Navigated to /notes/new directly. Current URL:", page.url());
+
       // Wait for editor to initialize (new editor takes time)
-      await page.waitForTimeout(5000);
+      console.log("Waiting 10 seconds for editor initialization...");
+      await page.waitForTimeout(10000);
 
       // Debug: log page title and check what elements exist
       const pageTitle = await page.title();
       console.log("Page title:", pageTitle);
 
+      // Check for iframes
+      const frames = page.frames();
+      console.log(`Found ${frames.length} frames (including main)`);
+      for (let i = 0; i < frames.length; i++) {
+        const frameUrl = frames[i].url();
+        console.log(`  Frame ${i}: ${frameUrl}`);
+      }
+
+      // Check for modals/dialogs
+      const dialogCount = await page.locator('[role="dialog"]').count();
+      const modalCount = await page.locator('.modal, [class*="modal"]').count();
+      console.log(`Modals/dialogs: ${dialogCount + modalCount}`);
+
+      // Check for buttons (might be onboarding)
+      const buttonCount = await page.locator('button').count();
+      console.log(`Buttons on page: ${buttonCount}`);
+
       const textareaCount = await page.locator('textarea').count();
       const inputCount = await page.locator('input[type="text"]').count();
       const editableCount = await page.locator('[contenteditable="true"]').count();
       console.log(`Found elements - textareas: ${textareaCount}, text inputs: ${inputCount}, contenteditable: ${editableCount}`);
+
+      // Check in all frames
+      for (let i = 0; i < frames.length; i++) {
+        const frameTextareaCount = await frames[i].locator('textarea').count();
+        const frameEditableCount = await frames[i].locator('[contenteditable="true"]').count();
+        if (frameTextareaCount > 0 || frameEditableCount > 0) {
+          console.log(`  Frame ${i} has: textareas=${frameTextareaCount}, contenteditable=${frameEditableCount}`);
+        }
+      }
 
       return;
     } catch (_) {
