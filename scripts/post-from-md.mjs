@@ -45,6 +45,11 @@ const browser = await chromium.launch({ headless: true });
 const context = await browser.newContext({ storageState: storage });
 const page    = await context.newPage();
 
+// Capture console and error messages
+page.on('console', msg => console.log('PAGE LOG:', msg.text()));
+page.on('pageerror', err => console.error('PAGE ERROR:', err.message));
+page.on('requestfailed', request => console.error('REQUEST FAILED:', request.url(), request.failure().errorText));
+
 async function gotoHome() {
   console.log("Navigating to note.com home...");
   await page.goto(NOTE_BASE_URL, { waitUntil: "domcontentloaded" });
