@@ -64,9 +64,20 @@ async function clickPostNewText() {
       await page.goto(`${NOTE_BASE_URL}/notes/new`, { waitUntil: "networkidle", timeout: 30000 });
       console.log("Navigated to /notes/new directly. Current URL:", page.url());
 
-      // Wait for editor to initialize (new editor takes time)
-      console.log("Waiting 10 seconds for editor initialization...");
-      await page.waitForTimeout(10000);
+      // Wait for loading spinner to disappear and editor to appear
+      console.log("Waiting for editor elements to appear (up to 60 seconds)...");
+
+      try {
+        // Wait for either textarea (title) or contenteditable (body) to appear
+        await Promise.race([
+          page.locator('textarea').first().waitFor({ state: "visible", timeout: 60000 }),
+          page.locator('[contenteditable="true"]').first().waitFor({ state: "visible", timeout: 60000 })
+        ]);
+        console.log("Editor elements found!");
+      } catch (waitErr) {
+        console.error("Timeout waiting for editor elements:", waitErr.message);
+        // Continue anyway to get debug info
+      }
 
       // Debug: log page title and check what elements exist
       const pageTitle = await page.title();
