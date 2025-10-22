@@ -46,17 +46,23 @@ const context = await browser.newContext({ storageState: storage });
 const page    = await context.newPage();
 
 async function gotoHome() {
+  console.log("Navigating to note.com home...");
   await page.goto(NOTE_BASE_URL, { waitUntil: "domcontentloaded" });
+  console.log("Current URL:", page.url());
 }
 
 async function clickPostNewText() {
+  console.log("Attempting to create new post...");
   try {
     await page.getByRole("button", { name: /投稿/ }).click({ timeout: 15000 });
     await page.getByRole("menuitem", { name: /テキスト/ }).click({ timeout: 15000 });
+    console.log("Clicked '投稿' button successfully");
     return;
   } catch (e) {
+    console.log("Failed to click '投稿' button, trying direct URL navigation...");
     try {
       await page.goto(`${NOTE_BASE_URL}/notes/new`, { waitUntil: "domcontentloaded" });
+      console.log("Navigated to /notes/new directly. Current URL:", page.url());
       return;
     } catch (_) {
       throw e;
@@ -65,6 +71,7 @@ async function clickPostNewText() {
 }
 
 async function fillTitle(text) {
+  console.log("Filling title:", text);
   const candidates = [
     page.getByPlaceholder("記事タイトル"),
     page.getByPlaceholder("タイトル"),
@@ -75,20 +82,27 @@ async function fillTitle(text) {
     try {
       await locator.waitFor({ state: "visible", timeout: 5000 });
       await locator.fill(text);
+      console.log("Title filled successfully");
       return;
     } catch {}
   }
+  console.warn("WARN: Could not find title field");
 }
 
 async function fillBody(md) {
+  console.log("Looking for editor (contenteditable)...");
+  console.log("Current URL before editor search:", page.url());
   const editor = page.locator('[contenteditable="true"]').first();
   await editor.waitFor({ state: "visible", timeout: 15000 });
+  console.log("Editor found, clicking...");
   await editor.click();
   const chunks = chunk(md, 3000);
+  console.log(`Typing body content (${chunks.length} chunks)...`);
   for (const c of chunks) {
     await editor.type(c, { delay: TYPE_DELAY });
     await page.waitForTimeout(50);
   }
+  console.log("Body content filled successfully");
 }
 
 async function uploadCoverIfAny() {
@@ -164,6 +178,8 @@ async function saveOrPublish() {
 try {
   await gotoHome();
   await clickPostNewText();
+  await page.screenshot({ path: 'debug-after-navigation.png', fullPage: true });
+  console.log("Screenshot saved: debug-after-navigation.png");
   await fillTitle(title);
   let bodyMd = content;
   if (!/^#\s+/.test(bodyMd.trim())) {
@@ -175,6 +191,12 @@ try {
   await saveOrPublish();
 } catch (e) {
   console.error("投稿に失敗:", e?.message || e);
+  try {
+    await page.screenshot({ path: 'debug-error.png', fullPage: true });
+    console.log("Error screenshot saved: debug-error.png");
+  } catch (screenshotErr) {
+    console.error("Failed to save screenshot:", screenshotErr?.message);
+  }
   process.exitCode = 1;
 } finally {
   await browser.close();
