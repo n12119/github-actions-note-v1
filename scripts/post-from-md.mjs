@@ -61,8 +61,10 @@ async function clickPostNewText() {
   } catch (e) {
     console.log("Failed to click '投稿' button, trying direct URL navigation...");
     try {
-      await page.goto(`${NOTE_BASE_URL}/notes/new`, { waitUntil: "domcontentloaded" });
+      await page.goto(`${NOTE_BASE_URL}/notes/new`, { waitUntil: "networkidle" });
       console.log("Navigated to /notes/new directly. Current URL:", page.url());
+      // Wait for editor to initialize (new editor takes time)
+      await page.waitForTimeout(2000);
       return;
     } catch (_) {
       throw e;
@@ -73,6 +75,7 @@ async function clickPostNewText() {
 async function fillTitle(text) {
   console.log("Filling title:", text);
   const candidates = [
+    page.locator('textarea[placeholder="記事タイトル"]'),
     page.getByPlaceholder("記事タイトル"),
     page.getByPlaceholder("タイトル"),
     page.locator('input[placeholder*="タイトル"]'),
@@ -80,7 +83,7 @@ async function fillTitle(text) {
   ];
   for (const locator of candidates) {
     try {
-      await locator.waitFor({ state: "visible", timeout: 5000 });
+      await locator.waitFor({ state: "visible", timeout: 10000 });
       await locator.fill(text);
       console.log("Title filled successfully");
       return;
@@ -92,10 +95,32 @@ async function fillTitle(text) {
 async function fillBody(md) {
   console.log("Looking for editor (contenteditable)...");
   console.log("Current URL before editor search:", page.url());
-  const editor = page.locator('[contenteditable="true"]').first();
-  await editor.waitFor({ state: "visible", timeout: 15000 });
-  console.log("Editor found, clicking...");
+
+  // New note.com editor uses ProseMirror with role="textbox"
+  const editorCandidates = [
+    page.locator('.ProseMirror[contenteditable="true"]'),
+    page.locator('[role="textbox"][contenteditable="true"]'),
+    page.locator('[contenteditable="true"]').first()
+  ];
+
+  let editor = null;
+  for (const candidate of editorCandidates) {
+    try {
+      await candidate.waitFor({ state: "visible", timeout: 10000 });
+      editor = candidate;
+      console.log("Editor found with selector:", editorCandidates.indexOf(candidate));
+      break;
+    } catch {}
+  }
+
+  if (!editor) {
+    throw new Error("Could not find editor element");
+  }
+
+  console.log("Clicking editor...");
   await editor.click();
+  await page.waitForTimeout(500);
+
   const chunks = chunk(md, 3000);
   console.log(`Typing body content (${chunks.length} chunks)...`);
   for (const c of chunks) {
