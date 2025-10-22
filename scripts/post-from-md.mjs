@@ -103,6 +103,17 @@ async function clickPostNewText() {
         }
       }
 
+      // NEW: Check actual page content
+      const bodyText = await page.locator('body').innerText();
+      console.log("=== PAGE TEXT CONTENT (first 500 chars) ===");
+      console.log(bodyText.substring(0, 500));
+      console.log("===========================================");
+
+      const bodyHTML = await page.locator('body').innerHTML();
+      console.log("=== PAGE HTML (first 1000 chars) ===");
+      console.log(bodyHTML.substring(0, 1000));
+      console.log("====================================");
+
       return;
     } catch (_) {
       throw e;
