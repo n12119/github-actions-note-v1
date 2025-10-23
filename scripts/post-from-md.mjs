@@ -41,9 +41,32 @@ function chunk(str, size) {
   return out;
 }
 
-const browser = await chromium.launch({ headless: true });
-const context = await browser.newContext({ storageState: storage });
-const page    = await context.newPage();
+// Launch browser with stealth settings to avoid bot detection
+const browser = await chromium.launch({
+  headless: true,
+  args: [
+    '--disable-blink-features=AutomationControlled',
+    '--disable-dev-shm-usage',
+    '--no-sandbox'
+  ]
+});
+
+const context = await browser.newContext({
+  storageState: storage,
+  userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+  viewport: { width: 1920, height: 1080 },
+  locale: 'ja-JP',
+  timezoneId: 'Asia/Tokyo'
+});
+
+// Hide webdriver property
+await context.addInitScript(() => {
+  Object.defineProperty(navigator, 'webdriver', {
+    get: () => undefined
+  });
+});
+
+const page = await context.newPage();
 
 // Capture console and error messages
 page.on('console', msg => console.log('PAGE LOG:', msg.text()));
