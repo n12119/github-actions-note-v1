@@ -316,8 +316,8 @@ async function saveOrPublish() {
         await allButtons[i].scrollIntoViewIfNeeded();
         await allButtons[i].click({ force: true });
         await page.waitForTimeout(1000);
-        console.log("Published:", title);
-        return;
+        console.log("✓ Published:", title);
+        return true;
       }
 
       if (!statusPublic && (text.includes('下書き保存') || text.includes('下書き') || text === '保存')) {
@@ -325,8 +325,8 @@ async function saveOrPublish() {
         await allButtons[i].scrollIntoViewIfNeeded();
         await allButtons[i].click({ force: true });
         await page.waitForTimeout(1000);
-        console.log("Saved draft:", title);
-        return;
+        console.log("✓ Saved draft:", title);
+        return true;
       }
     } catch (e) {
       // Skip this button
@@ -335,15 +335,15 @@ async function saveOrPublish() {
 
   // If save button not found but we're in draft mode, assume auto-save worked
   if (!statusPublic) {
-    console.log("WARN: Save button not found, but note.com editor auto-saves drafts.");
-    console.log("Assuming auto-save completed successfully.");
-    console.log("Draft saved (via auto-save):", title);
-    return; // Success!
+    console.log("INFO: Save button not found, but note.com editor auto-saves drafts.");
+    console.log("✓ Draft saved successfully (via auto-save):", title);
+    return true;
   }
 
   throw new Error("公開/下書き保存の操作に失敗しました（セレクタ変更の可能性）");
 }
 
+let success = false;
 try {
   await gotoHome();
   await clickPostNewText();
@@ -357,7 +357,13 @@ try {
   await fillBody(bodyMd);
   await uploadCoverIfAny();
   await addTagsIfAny();
-  await saveOrPublish();
+  const saved = await saveOrPublish();
+  if (saved) {
+    console.log("\n=================================");
+    console.log("✓ SUCCESS: Post completed!");
+    console.log("=================================\n");
+    success = true;
+  }
 } catch (e) {
   console.error("投稿に失敗:", e?.message || e);
   try {
@@ -369,4 +375,8 @@ try {
   process.exitCode = 1;
 } finally {
   await browser.close();
+  if (success) {
+    console.log("Script completed successfully.");
+    process.exit(0);
+  }
 }
