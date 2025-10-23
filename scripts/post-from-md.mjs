@@ -286,82 +286,47 @@ async function addTagsIfAny() {
 async function saveOrPublish() {
   console.log("Attempting to save or publish...");
 
-  // Try to find and click save/publish button directly (new editor doesn't need modal)
-  if (statusPublic) {
-    console.log("Looking for publish button...");
-    const publishCandidates = [
-      page.getByRole("button", { name: /公開に進む/ }),
-      page.getByRole("button", { name: /^公開$/ }),
-      page.getByRole("button", { name: /公開する/ }),
-      page.getByText("公開に進む")
-    ];
-    for (let i = 0; i < publishCandidates.length; i++) {
-      try {
-        await publishCandidates[i].waitFor({ state: "visible", timeout: 5000 });
-        await publishCandidates[i].click({ timeout: 5000 });
-        console.log("Clicked publish button, index:", i);
+  // Debug: List all buttons
+  const allButtons = await page.locator('button').all();
+  console.log(`Found ${allButtons.length} buttons total`);
+
+  for (let i = 0; i < Math.min(allButtons.length, 10); i++) {
+    try {
+      const text = await allButtons[i].innerText();
+      const isVisible = await allButtons[i].isVisible();
+      console.log(`  Button ${i}: text="${text}", visible=${isVisible}`);
+    } catch (e) {
+      console.log(`  Button ${i}: Could not read text`);
+    }
+  }
+
+  // Try to find button by searching all buttons
+  console.log("Searching all buttons for save/publish text...");
+  for (let i = 0; i < allButtons.length; i++) {
+    try {
+      const text = await allButtons[i].innerText();
+      const isVisible = await allButtons[i].isVisible();
+
+      if (statusPublic && (text.includes('公開に進む') || text.includes('公開する') || text === '公開')) {
+        console.log(`Found publish button at index ${i}: "${text}", visible=${isVisible}`);
+        await allButtons[i].scrollIntoViewIfNeeded();
+        await allButtons[i].click({ force: true });
         await page.waitForTimeout(1000);
         console.log("Published:", title);
         return;
-      } catch (err) {
-        console.log(`Publish candidate ${i} failed:`, err.message);
       }
-    }
-  }
 
-  // Try to save as draft
-  console.log("Looking for draft save button...");
-  const draftCandidates = [
-    page.getByRole("button", { name: /下書き保存/ }),
-    page.getByRole("button", { name: /保存/ }),
-    page.getByText("下書き保存"),
-    page.locator('button:has-text("下書き保存")')
-  ];
-  for (let i = 0; i < draftCandidates.length; i++) {
-    try {
-      await draftCandidates[i].waitFor({ state: "visible", timeout: 5000 });
-      await draftCandidates[i].click({ timeout: 5000 });
-      console.log("Clicked draft save button, index:", i);
-      await page.waitForTimeout(1000);
-      console.log("Saved draft:", title);
-      return;
-    } catch (err) {
-      console.log(`Draft candidate ${i} failed:`, err.message);
-    }
-  }
-
-  // If direct buttons didn't work, try opening publish settings modal (old editor)
-  console.log("Direct buttons not found, trying publish settings modal...");
-  try {
-    await openPublishSettings();
-
-    if (statusPublic) {
-      const publishCandidates = [
-        page.getByRole("button", { name: /^公開$/ }),
-        page.getByRole("button", { name: /公開する/ })
-      ];
-      for (const b of publishCandidates) {
-        try {
-          await b.click({ timeout: 5000 });
-          console.log("Published:", title);
-          return;
-        } catch {}
-      }
-    }
-
-    const draftCandidates = [
-      page.getByRole("button", { name: /下書き保存/ }),
-      page.getByRole("button", { name: /保存/ })
-    ];
-    for (const b of draftCandidates) {
-      try {
-        await b.click({ timeout: 5000 });
+      if (!statusPublic && (text.includes('下書き保存') || text.includes('下書き') || text === '保存')) {
+        console.log(`Found draft save button at index ${i}: "${text}", visible=${isVisible}`);
+        await allButtons[i].scrollIntoViewIfNeeded();
+        await allButtons[i].click({ force: true });
+        await page.waitForTimeout(1000);
         console.log("Saved draft:", title);
         return;
-      } catch {}
+      }
+    } catch (e) {
+      // Skip this button
     }
-  } catch (modalErr) {
-    console.log("Modal approach also failed:", modalErr.message);
   }
 
   throw new Error("公開/下書き保存の操作に失敗しました（セレクタ変更の可能性）");
