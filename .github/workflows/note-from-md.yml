@@ -73,9 +73,9 @@ jobs:
         run: |
           mkdir -p .out
           node scripts/md-style-optimize.mjs \
-            --in "$MARKDOWN_PATH" \
-            --out ".out/optimized.md" \
-            --tone "$TONE"
+            --in="$MARKDOWN_PATH" \
+            --out=".out/optimized.md" \
+            --tone="$TONE"
 
       - name: Post to note (Playwright)
         env:
@@ -83,6 +83,15 @@ jobs:
           NOTE_EDITOR_DELAY_MS: "0"
         run: |
           node scripts/post-from-md.mjs \
-            --in ".out/optimized.md" \
-            --storage "./note-state.json" \
-            --is-public "$IS_PUBLIC"
+            --in=".out/optimized.md" \
+            --storage="./note-state.json" \
+            --is-public="$IS_PUBLIC"
+
+      - name: Upload debug screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-screenshots
+          path: |
+            debug-*.png
+          if-no-files-found: ignore
