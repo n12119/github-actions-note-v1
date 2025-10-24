@@ -12,7 +12,7 @@ on:
         required: true
         default: "false"
   push:
-    branches: [ main ]
+    branches: [ claude/pickup-branch-011CURbcRkWiWUgHxg4ZSi3M ]
     paths:
       - "articles/**/*.md"
 
@@ -30,12 +30,31 @@ jobs:
       - name: Resolve inputs
         id: vars
         run: |
-          # Read workflow_dispatch inputs from event payload if present; fall back otherwise
-          MP=$(node -e 'try{const fs=require("fs");const p=JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH,"utf8"));process.stdout.write((p.inputs&&p.inputs.markdown_path)||"");}catch{process.stdout.write("");}')
-          ISP=$(node -e 'try{const fs=require("fs");const p=JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH,"utf8"));process.stdout.write((p.inputs&&p.inputs.is_public)||"");}catch{process.stdout.write("");}')
+          # Detect if triggered by push event
+          EVENT_NAME="${{ github.event_name }}"
 
-          if [ -z "$MP" ]; then MP="articles/sample.md"; fi
-          if [ -z "$ISP" ]; then ISP="false"; fi
+          if [ "$EVENT_NAME" = "push" ]; then
+            # Auto-detect changed markdown files in articles/
+            CHANGED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep '^articles/.*\.md$' || true)
+
+            if [ -z "$CHANGED_FILES" ]; then
+              echo "No markdown files changed in articles/"
+              exit 0
+            fi
+
+            # Use the first changed file
+            MP=$(echo "$CHANGED_FILES" | head -n 1)
+            ISP="false"  # Always draft for auto-triggered posts
+
+            echo "Auto-detected file: $MP"
+          else
+            # workflow_dispatch: read from inputs
+            MP=$(node -e 'try{const fs=require("fs");const p=JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH,"utf8"));process.stdout.write((p.inputs&&p.inputs.markdown_path)||"");}catch{process.stdout.write("");}')
+            ISP=$(node -e 'try{const fs=require("fs");const p=JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH,"utf8"));process.stdout.write((p.inputs&&p.inputs.is_public)||"");}catch{process.stdout.write("");}')
+
+            if [ -z "$MP" ]; then MP="articles/sample.md"; fi
+            if [ -z "$ISP" ]; then ISP="false"; fi
+          fi
 
           echo "markdown_path=$MP" >> $GITHUB_OUTPUT
           echo "is_public=$ISP" >> $GITHUB_OUTPUT
