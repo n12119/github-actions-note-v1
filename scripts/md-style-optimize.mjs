@@ -2,7 +2,6 @@
 /**
  * Markdown 文体最適化（Anthropic）
  *  - 見出し/リンク/コードブロックの構造を壊さずに note 向けに整形
- *  - tone: desu-masu | da-dearu
  */
 import fs from "fs/promises";
 import path from "path";
@@ -15,11 +14,9 @@ const args = Object.fromEntries(process.argv.slice(2).map(s => {
 }));
 const inPath  = args.in || args.i;
 const outPath = args.out || ".out/optimized.md";
-const toneRaw = (args.tone || "desu-masu").toLowerCase();
-const tone    = toneRaw === "da-dearu" ? "da-dearu" : "desu-masu";
 
 if (!inPath) {
-  console.error("Usage: node scripts/md-style-optimize.mjs --in articles/xxx.md [--out .out/optimized.md] [--tone desu-masu|da-dearu]");
+  console.error("Usage: node scripts/md-style-optimize.mjs --in articles/xxx.md [--out .out/optimized.md]");
   process.exit(1);
 }
 
@@ -42,7 +39,6 @@ async function optimizeWithAnthropic(md) {
     "- 句読点・記号のゆれ（。、！？」など）を正し、冗長表現を簡潔化する。",
     "- 箇条書きは各項目1〜2文を目安に簡潔にする。",
     "- 適切な位置に改行を挿入し、可読性を高める。",
-    `- 文体は「${tone === "da-dearu" ? "だ・である調" : "です・ます調"}」で統一する。`,
     "- 出力は **Markdown の本文のみ** とし、余計な前置きや解説は付けない。"
   ].join("\n");
 

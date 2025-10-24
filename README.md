@@ -45,7 +45,6 @@ Markdown形式で記事を書くと、GitHub Actions + Playwright + Claude API�
 4. パラメータを入力：
    - **markdown_path**: 投稿する .md ファイルのパス（例: `articles/sample.md`）
    - **is_public**: `false` = 下書き保存 / `true` = 公開
-   - **tone**: `desu-masu` = です・ます調 / `da-dearu` = だ・である調
 5. `Run workflow` で実行
 
 ### 方法2: 自動実行

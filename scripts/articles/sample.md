@@ -2,7 +2,6 @@
 title: "GitHub Actions で note へ下書きを自動化する（Markdown 取り込み編）"
 tags: ["GitHub Actions","note","Playwright"]
 status: "draft"       # "public" にすると公開
-tone: "desu-masu"     # "da-dearu" にすると だ・である調
 ---
 
 # GitHub Actions で note へ下書きを自動化する（Markdown 取り込み編）

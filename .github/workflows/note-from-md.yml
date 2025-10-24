@@ -11,10 +11,6 @@ on:
         description: "Publish? true:公開 / false:下書き保存"
         required: true
         default: "false"
-      tone:
-        description: "desu-masu or da-dearu"
-        required: false
-        default: "desu-masu"
   push:
     branches: [ main ]
     paths:
@@ -36,20 +32,16 @@ jobs:
         run: |
           # Read workflow_dispatch inputs from event payload if present; fall back otherwise
           MP=$(node -e 'try{const fs=require("fs");const p=JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH,"utf8"));process.stdout.write((p.inputs&&p.inputs.markdown_path)||"");}catch{process.stdout.write("");}')
-          TONE=$(node -e 'try{const fs=require("fs");const p=JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH,"utf8"));process.stdout.write((p.inputs&&p.inputs.tone)||"");}catch{process.stdout.write("");}')
           ISP=$(node -e 'try{const fs=require("fs");const p=JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH,"utf8"));process.stdout.write((p.inputs&&p.inputs.is_public)||"");}catch{process.stdout.write("");}')
 
           if [ -z "$MP" ]; then MP="articles/sample.md"; fi
-          if [ -z "$TONE" ]; then TONE="desu-masu"; fi
           if [ -z "$ISP" ]; then ISP="false"; fi
 
           echo "markdown_path=$MP" >> $GITHUB_OUTPUT
-          echo "tone=$TONE" >> $GITHUB_OUTPUT
           echo "is_public=$ISP" >> $GITHUB_OUTPUT
 
           # Also export as environment variables for subsequent steps
           echo "MARKDOWN_PATH=$MP" >> $GITHUB_ENV
-          echo "TONE=$TONE" >> $GITHUB_ENV
           echo "IS_PUBLIC=$ISP" >> $GITHUB_ENV
 
       - name: Install deps
@@ -74,8 +66,7 @@ jobs:
           mkdir -p .out
           node scripts/md-style-optimize.mjs \
             --in="$MARKDOWN_PATH" \
-            --out=".out/optimized.md" \
-            --tone="$TONE"
+            --out=".out/optimized.md"
 
       - name: Post to note (Playwright)
         env:
