@@ -5,9 +5,9 @@ Markdown形式で記事を書くと、GitHub Actions + Playwright + Claude API�
 ## 🎯 主な機能
 
 - **Markdown → note.com**: Markdownファイルから直接note.comに投稿
-- **AI スタイル最適化**: Claude API で文体を統一（です・ます調 / だ・である調）
-- **手動・自動実行**: GitHub Actions の手動実行、または main ブランチへの push で自動実行
-- **下書き/公開選択**: 下書き保存または即座に公開を選択可能
+- **AI スタイル最適化**: Claude API で記事を note 向けに最適化
+- **手動・自動実行**: GitHub Actions の手動実行、または `articles/` への push で自動実行
+- **下書き/公開選択**: 手動実行時は公開/下書きを選択可能、自動実行時は常に下書き保存
 - **ステルス投稿**: bot検出を回避する高度な Playwright 設定
 
 ---
@@ -16,7 +16,7 @@ Markdown形式で記事を書くと、GitHub Actions + Playwright + Claude API�
 
 `.github/workflows/note-from-md.yml` が以下の処理を実行します：
 
-1. **スタイル最適化**: Claude API で指定した文体に統一
+1. **スタイル最適化**: Claude API で記事を note 向けに最適化（句読点統一、冗長表現の簡潔化など）
 2. **自動投稿**: Playwright で note.com のエディタを操作して投稿
 3. **自動保存対応**: note.com の自動保存機能を活用
 
@@ -47,10 +47,13 @@ Markdown形式で記事を書くと、GitHub Actions + Playwright + Claude API�
    - **is_public**: `false` = 下書き保存 / `true` = 公開
 5. `Run workflow` で実行
 
-### 方法2: 自動実行
+### 方法2: 自動実行（プッシュトリガー）
 
-1. `articles/` ディレクトリに .md ファイルを作成
-2. main ブランチに push すると自動実行
+1. `articles/` ディレクトリに .md ファイルを作成または編集
+2. `claude/pickup-branch-011CURbcRkWiWUgHxg4ZSi3M` ブランチに push
+3. GitHub Actions が自動的に起動し、**下書きとして**note に保存
+
+> **注意**: 自動実行時は常に下書き保存（`is_public=false`）になります。公開したい場合は手動実行を使用してください。
 
 ---
 
@@ -162,16 +165,18 @@ await context.addInitScript(() => {
 | スクリプト | 説明 |
 |-----------|------|
 | `login-note.mjs` | note.com ログイン状態の取得 |
-| `md-style-optimize.mjs` | Claude API で文体を統一 |
+| `md-style-optimize.mjs` | Claude API で記事を note 向けに最適化 |
 | `post-from-md.mjs` | Playwright で note.com に投稿 |
 
 ### ワークフローのステップ
 
-1. **Resolve inputs**: 手動実行または push イベントの入力を解決
+1. **Resolve inputs**: 手動実行または push イベントを検出
+   - Push イベント時: 変更された `.md` ファイルを自動検出
+   - 手動実行時: ユーザーが指定したパラメータを使用
 2. **Install deps**: Node.js 依存関係と Playwright のインストール
 3. **Restore note login state**: Secret から storageState を復元
 4. **Optimize markdown style**: Claude API でスタイル最適化
-5. **Post to note**: Playwright で投稿
+5. **Post to note**: Playwright で投稿（自動実行時は常に下書き保存）
 6. **Upload debug screenshots**: エラー時のスクリーンショット保存
 
 ---
